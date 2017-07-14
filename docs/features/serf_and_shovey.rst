@@ -36,13 +36,13 @@ Setting goiardi up to use shovey is pretty straightforward.
 * Generate an RSA public/private keypair. Goiardi will use this to sign its
   requests to the client, and schob will verify the requests with it.::
 
-      openssl genrsa -out shovey.pem 2048 # generate 2048 bit private key
-      openssl rsa -in shovey.pem -pubout -out shovey.key # public key
+      openssl genrsa -out shovey.key 2048 # generate 2048 bit private key
+      openssl rsa -in shovey.key -pubout -out shovey.pem # public key
 
   Obviously, save these keys.
 * If you're using an external service (like vault) to store secrets, please see   :ref:`secrets` for how to set up shovey's signing key with that. 
 * Run goiardi like you usually would, but add these options:
-  ``--use-serf --use-shovey --sign-priv-key=/path/to/shovey.pem``
+  ``--use-serf --use-shovey --sign-priv-key=/path/to/shovey.key``
 * Install serf and schob on a chef node. Ensure that the serf agent on the node
   is using the same name as the chef node. The ``shovey-jobs`` cookbook makes
   installing schob easier, but it's not too hard to do by hand by running
