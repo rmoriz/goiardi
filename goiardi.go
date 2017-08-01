@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -77,6 +76,7 @@ type apiTimerInfo struct {
 
 var noOpUserReqs = []string{
 	"/authenticate_user",
+	"/debug",
 	"/file_store",
 	"/universe",
 	"/principals",
@@ -298,34 +298,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// TODO: set this to verbosity level 4 or so
 	logger.Debugf("Serving %s -- %s", r.URL.Path, r.Method)
 
-	// block /debug/pprof if not localhost
-	if strings.HasPrefix(r.URL.Path, "/debug") {
-		fwded := strings.Split(r.Header.Get("X-Forwarded-For"), ", ")
-		remoteIP, _, rerr := net.SplitHostPort(r.RemoteAddr)
-		var block bool
-		if rerr == nil {
-			var xForwarded string
-			if len(fwded) != 0 {
-				xForwarded = fwded[len(fwded)-1]
-			}
-			logger.Debugf("remote ip candidates: ra: '%s', '%s'", remoteIP, xForwarded)
-			rIP := net.ParseIP(remoteIP)
-			xFIP := net.ParseIP(xForwarded)
-			logger.Debugf("ips now: '%q' '%q'", rIP, xFIP)
-			logger.Debugf("local? '%q' '%q'", rIP.IsLoopback(), xFIP.IsLoopback())
-			if !rIP.IsLoopback() && !xFIP.IsLoopback() {
-				logger.Debugf("blocked %s (x-forwarded-for: %s) from accessing /debug/pprof!", rIP.String(), xFIP.String())
-				block = true
-			}
-		} else {
-			logger.Debugf("remote ip %q is bad, not IP:port (blocking from /debug/pprof)", r.RemoteAddr)
-			block = true
-		}
-		if block {
-			http.Error(w, "Forbidden!", http.StatusForbidden)
-			return
-		}
-	}
+	logger.Debugf("rmoriz debug build")
 
 	if r.Method != "CONNECT" {
 		if p := cleanPath(r.URL.Path); p != r.URL.Path {
@@ -379,7 +352,7 @@ func (h *interceptHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	/* Only perform the authorization check if that's configured. Bomb with
 	 * an error if the check of the headers, timestamps, etc. fails. */
 	/* No clue why /principals doesn't require authorization. Hrmph. */
-	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
+	if config.Config.UseAuth && !strings.HasPrefix(r.URL.Path, "/file_store") && !strings.HasPrefix(r.URL.Path, "/debug") && !(strings.HasPrefix(r.URL.Path, "/principals") && r.Method == "GET") {
 		herr := authentication.CheckHeader(userID, r)
 		if herr != nil {
 			w.Header().Set("Content-Type", "application/json")
