@@ -206,6 +206,12 @@ func main() {
 		startReportPurge()
 	}
 
+	displayStatus()
+
+	if config.Config.DisplayStatusInterval > 0 {
+		recurringDisplayStatus(config.Config.DisplayStatusInterval)
+	}
+
 	/* Create default clients and users. Currently chef-validator,
 	 * chef-webui, and admin. */
 	createDefaultActors()
@@ -803,8 +809,7 @@ func startNodeMonitor() {
 
 func startReportPurge() {
 	go func() {
-		// purge reports after 2 hours, I guess.
-		ticker := time.NewTicker(2 * time.Hour)
+		ticker := time.NewTicker(time.Second * time.Duration(60))
 		for _ = range ticker.C {
 			del, err := report.DeleteByAge(config.Config.PurgeReportsDur)
 			if err != nil {
@@ -833,6 +838,24 @@ func startNodeStatusPurge() {
 			}
 		}
 	}()
+}
+
+func recurringDisplayStatus(seconds int) {
+	go func() {
+		ticker := time.NewTicker(time.Second * time.Duration(seconds))
+		for _ = range ticker.C {
+			displayStatus()
+		}
+	}()
+}
+
+func displayStatus() {
+	logger.Infof("Objects:")
+	logger.Infof("Nodes: %d", node.Count())
+	logger.Infof("NodeStatuses: %d", len(node.AllNodeStatuses()))
+	logger.Infof("LogInfos: %d", len(loginfo.AllLogInfos()))
+	logger.Infof("Reports: %d", len(report.GetList()))
+	logger.Infof("Sandboxes: %d", len(sandbox.AllSandboxes()))
 }
 
 func initGeneralStatsd(metricsBackend met.Backend) {
